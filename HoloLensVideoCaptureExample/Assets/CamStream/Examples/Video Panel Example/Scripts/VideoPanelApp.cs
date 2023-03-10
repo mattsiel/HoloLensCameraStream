@@ -7,6 +7,7 @@ using UnityEngine;
 using System;
 using HoloLensCameraStream;
 using System.Collections.Generic;
+using System.Collections;
 
 #if WINDOWS_UWP && XR_PLUGIN_OPENXR
 using Windows.Perception.Spatial;
@@ -25,6 +26,8 @@ using Windows.Perception.Spatial;
 public class VideoPanelApp : MonoBehaviour
 {
     byte[] _latestImageBytes;
+    TCPClient tcpClient;
+    TCPServer tcpServer;
     HoloLensCameraStream.Resolution _resolution;
 
     //"Injected" objects.
@@ -38,13 +41,80 @@ public class VideoPanelApp : MonoBehaviour
     SpatialCoordinateSystem _spatialCoordinateSystem;
 #endif
 
-    Queue<Action> _mainThreadActions;
+    public void SendBytesToPythonAll()
+    {
+        StartCoroutine(SendAllFrames());
+    }
 
+    public void SendBytesToPythonSingle()
+    {
+        StartCoroutine(SendSingleFrame());
+    }
+
+    public void SendTxtBytesToPythonSingle()
+    {
+        StartCoroutine(SendSingleFrameTxt());
+    }
+
+
+    // done by Matthew Sielecki
+    public IEnumerator SendAllFrames()
+    {
+        List<byte[]> savedImages = new List<byte[]>();
+
+        // gets 30 frames of data 
+        for(int i = 0; i < 10; i++) {
+            savedImages.Add(_latestImageBytes);
+
+            // waits 5 frames before adding to list again
+            for(int x = 0; x < 5; x++){
+                yield return null;
+            }
+        }
+#if ENABLE_WINMD_SUPPORT
+#if WINDOWS_UWP
+        for(int i = 0; i < 10; i++){
+            tcpClient.SendPVImageAsync(savedImages[i]);
+            yield return new WaitForSeconds(0.7f);
+        }
+        yield return new WaitForSeconds(1.0f);
+        tcpClient.MakeVid();
+#endif  
+#endif
+    yield return null;
+    }
+
+    public IEnumerator SendSingleFrame()
+    {
+#if ENABLE_WINMD_SUPPORT
+#if WINDOWS_UWP
+        tcpClient.SendPVImageAsync(_latestImageBytes);
+#endif  
+#endif
+    yield return null;
+    }
+
+    public IEnumerator SendSingleFrameTxt()
+    {
+#if ENABLE_WINMD_SUPPORT
+#if WINDOWS_UWP
+        tcpClient.SendPVTxtAsync(_latestImageBytes);
+#endif  
+#endif
+    yield return null;
+    }
+
+
+    Queue<Action> _mainThreadActions;
     void Start()
     {
+        tcpClient = GetComponent<TCPClient>();
+        tcpServer = GetComponent<TCPServer>();
         _mainThreadActions = new Queue<Action>();
+        
 
         //Fetch a pointer to Unity's spatial coordinate system if you need pixel mapping
+
 #if WINDOWS_UWP
 
 #if XR_PLUGIN_WINDOWSMR
@@ -85,6 +155,7 @@ public class VideoPanelApp : MonoBehaviour
                 _mainThreadActions.Dequeue().Invoke();
             }
         }
+
     }
 
     private void Enqueue(Action action)
