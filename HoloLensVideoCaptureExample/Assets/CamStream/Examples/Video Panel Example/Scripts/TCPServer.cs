@@ -44,7 +44,8 @@ public class TCPServer : MonoBehaviour
     int sizeOfBuffer;
     string error;
     public Vector3[] inputPointsTCP;
-    public Vector3 offset = new Vector3(-4.6f, -1.6f, 8);
+    public Vector3 offset = new Vector3(0, 0, 0);
+    public Transform Alignment;
     
     uint imageSize;
 #if !UNITY_EDITOR
@@ -58,7 +59,7 @@ public class TCPServer : MonoBehaviour
     void Start()
     {
 #if !UNITY_EDITOR
-        offset = new Vector3(-4.6f, -1.6f, 8);
+        offset = Alignment.position;
         rend = this.GetComponent<Renderer>();
         listener = new StreamSocketListener();
         port = "8080";
@@ -186,7 +187,7 @@ public class TCPServer : MonoBehaviour
             float v2 = float.Parse(chx[2])/35;
             v2 = 0;
             // realInput = "floats: " + v0.ToString() + " " + v1.ToString() + " " + v2.ToString();
-            Vector3 vec = new Vector3(v0, v1, v2) + offset;
+            Vector3 vec = new Vector3(v0, v1, v2);
             inputPointsTCP[i-1] = vec;
             realInput = "vectors: " + inputPointsTCP[i-1].x + " " + inputPointsTCP[i-1].y + " " + inputPointsTCP[i-1].z;
             logRealInput = true;
@@ -250,15 +251,15 @@ public class TCPServer : MonoBehaviour
     //}
 #endif
 
-    public bool Offset(Vector3 offs)
+    public bool Offset()
     {
-        inputPointsTCP = JointManager.Instance.inputPoints;
-        offset = JointManager.Instance.offset;
-        for(int i = 0; i < inputPointsTCP.Length; i++) {
-            Debug.Log( "joint " + inputPointsTCP[i]);
-            inputPointsTCP[i] = inputPointsTCP[i] + offs;
-        }
+        offset = inputPointsTCP[0] - Alignment.position;
+        inputPointsTCP[0] = Alignment.position;
 
+        for(int i = 1; i < inputPointsTCP.Length; i++)
+        {
+            inputPointsTCP[i] = inputPointsTCP[i] + offset;
+        } 
         return true;
     }
     

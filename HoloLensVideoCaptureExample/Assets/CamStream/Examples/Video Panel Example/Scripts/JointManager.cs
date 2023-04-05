@@ -9,6 +9,7 @@ public class JointManager : MonoBehaviour
 {
     // List<Vector3> inputPoints = new List<Vector3>();
     public Vector3[] inputPoints = new Vector3[30];
+    public Vector3[] origins = new Vector3[30];
     public static JointManager Instance;
     public TCPServer TCPServerInst;
     public Appendage leftShoulder, rightShoulder;
@@ -19,9 +20,11 @@ public class JointManager : MonoBehaviour
     public Appendage leftThigh, rightThigh;
     public Appendage leftHip, rightHip;
     public Appendage leftCalf, rightCalf;
-    public Vector3 offset;
+    public Vector3 offsetx = new Vector3(0, 0, 0);
+    public Vector3 offsety = new Vector3(0, 0, 0);
     public Photo photo;
     bool moving = false;
+    public Transform Alignment;
 
     public Joint Joint0, Joint1, Joint2, Joint3, Joint4, Joint5, Joint6, Joint7, Joint8, Joint9, 
     Joint10, Joint11, Joint12, Joint13, Joint14;
@@ -30,13 +33,13 @@ public class JointManager : MonoBehaviour
     string dataStr2 = "[[[205.05992     60.275684     0.8442647 ][201.8461      90.79862      0.7895425 ][178.44495     90.74817      0.70575386][159.60767    127.14301      0.68829864][143.36208    159.63239      0.68663734][226.53299     91.426125     0.74782443][242.75282    136.8857       0.5977534 ][260.91974    171.94618      0.66528285][199.21667    172.59653      0.5727261 ][182.99342    170.64966      0.50732106][186.25975    225.19977      0.7617384 ][  0.           0.           0.        ][214.81424    173.2575       0.55140316][209.62798    225.86302      0.63303447][  0.           0.           0.        ][199.8878      55.062904     0.86086994][209.61972     55.08306      0.84150386][192.08124     58.300484     0.7856644 ][215.48468     58.941784     0.8354858 ][  0.           0.           0.        ][  0.           0.           0.        ][  0.           0.           0.        ][  0.           0.           0.        ][  0.           0.           0.        ][  0.           0.           0.        ]]]";
     
     string dataStr3 = "[[[220.64293     72.59975      0.8196673 ][219.9934      92.72144      0.72339684][200.53319     92.080444     0.65149885][194.01683     65.44989      0.5865198 ][199.88382     25.185583     0.65358794][237.55392     92.73597      0.6760509 ][246.64006     65.4404       0.4988146 ][244.05623     27.766516     0.6778809 ][214.81604    177.7971       0.54274994][199.86731    177.14473      0.5222914 ][199.88133    231.7085       0.56231403][  0.           0.           0.        ][229.11209    178.44904      0.5187891 ][221.31438    237.55731      0.48274985][  0.           0.           0.        ][215.47131     68.68609      0.8076409 ][225.19304     68.67941      0.7818011 ][208.96683     70.64154      0.770159  ][231.07092     70.01674      0.67402077][  0.           0.           0.        ][  0.           0.           0.        ][  0.           0.           0.        ][  0.           0.           0.        ][  0.           0.           0.        ][  0.           0.           0.        ]]]";
+    
+    string dataStr4 = "[[[1.03118134e+02 6.99873962e+01 2.88619578e-01][1.03757507e+02 8.75215988e+01 7.35780954e-01][8.55773468e+01 9.07415543e+01 7.16933608e-01][6.34864426e+01 6.54687424e+01 7.07642257e-01][8.04082489e+01 4.20597572e+01 7.24343121e-01][1.21941612e+02 8.62053604e+01 7.26475894e-01][1.27820770e+02 6.41296692e+01 7.71827757e-01][1.08954285e+02 4.01150093e+01 7.46629119e-01][1.03761574e+02 1.38190353e+02 6.38162971e-01][9.07512207e+01 1.38192856e+02 6.32528305e-01][6.02510033e+01 1.58949036e+02 8.16145182e-01][6.47959747e+01 2.27809174e+02 5.01409650e-01][1.17400948e+02 1.38182007e+02 6.20658875e-01][1.37524857e+02 1.60911041e+02 7.70069838e-01][1.23897186e+02 2.15476379e+02 6.96041703e-01][9.92138443e+01 6.54317474e+01 3.01264435e-01][1.06361214e+02 6.54366455e+01 2.87769794e-01][9.07777481e+01 6.86885452e+01 3.72277319e-01][1.11543053e+02 6.93356628e+01 1.21816687e-01][1.42713959e+02 2.30408524e+02 6.66928828e-01][1.43365540e+02 2.27155731e+02 7.03941524e-01][1.18062080e+02 2.20677872e+02 5.86193681e-01][7.12915802e+01 2.32383850e+02 2.03017890e-01][6.41454773e+01 2.37560364e+02 2.09143758e-01][6.60891037e+01 2.32355682e+02 2.48061493e-01]]]";
     void Start()
     {
         Instance = this;
-        offset = new Vector3(-4.6f, -1.6f, 8);
-        getDataPoints(dataStr1);
-        SetJoints();
-        SetBodyFromPoints();
+        getDataPoints(dataStr4);
+        UpdatePosition();
 
     }
 
@@ -44,14 +47,18 @@ public class JointManager : MonoBehaviour
     {
         if(TCPServerInst.finishedSettingData)
         {
+            inputPoints = TCPServerInst.inputPointsTCP;
+            origins = inputPoints;
             UpdatePosition();
             TCPServerInst.finishedSettingData = false;
+            UpdatePosition();
         }
 
         if(moving)
         {
             UpdatePosition();
             moving = false;
+            UpdatePosition();
         }
 
 
@@ -74,38 +81,56 @@ public class JointManager : MonoBehaviour
 
     public void Up()
     {   
-        Vector3 off = new Vector3(0, -0.2f, 0);
-        offset += off;
-        TCPServerInst.Offset(off);
+        Vector3 off = new Vector3(0, 0.2f, 0);
+        Alignment.position += off;
         moving = true;
     }
     public void Down()
     {
-        Vector3 off = new Vector3(0, 0.2f, 0);
-        offset += off;
-        TCPServerInst.Offset(off);
+        Vector3 off = new Vector3(0, -0.2f, 0);
+        Alignment.position += off;
         moving = true;
     }
     public void Right()
     {
         Vector3 off = new Vector3(0.2f, 0, 0);
-        offset += off;
-        TCPServerInst.Offset(off);
+        Alignment.position += off;
         moving = true;
     }
     public void Left()
     {
         Vector3 off = new Vector3(-0.2f, 0, 0);
-        offset += off;
-        TCPServerInst.Offset(off);
+        Alignment.position += off;
         moving = true;
     }
 
     public void UpdatePosition()
-    {
-        inputPoints = TCPServerInst.inputPointsTCP;
+    {   
         SetJoints();
         SetBodyFromPoints();
+    }
+
+    public void AlignData()
+    {
+        Debug.Log(" alignment block: " + Alignment.position);
+        Debug.Log(" originblock: " + origins[1]);
+
+        offsetx = origins[1] - Alignment.position;
+        offsety = Alignment.position + origins[1];
+
+        inputPoints[1].x = Alignment.position.x;
+        inputPoints[1].y = -Alignment.position.y;
+        inputPoints[1].z = Alignment.position.z;
+
+        for(int i = 0; i < inputPoints.Length; i++)
+        {
+            if(i != 1){
+                inputPoints[i].x = origins[i].x - offsetx.x;
+                inputPoints[i].y = origins[i].y - offsety.y;
+                inputPoints[i].z = origins[i].z - offsetx.z;
+            }
+        }
+
     }
 
     void SetBodyFromPoints()
@@ -134,7 +159,7 @@ public class JointManager : MonoBehaviour
 
     void SetJoints()
     {
-
+        AlignData();
         Joint0.SetPointer(inputPoints[0]);
         Joint1.SetPointer(inputPoints[1]);
         Joint2.SetPointer(inputPoints[2]);
@@ -173,9 +198,9 @@ public class JointManager : MonoBehaviour
             float v0 = float.Parse(chx[0])/50;
             float v1 = float.Parse(chx[1])/50;
             float v2 = float.Parse(chx[2])/50;
-            v2 = 0;
-            Vector3 vec = new Vector3(v0, v1, v2) + offset;
+            Vector3 vec = new Vector3(v0, v1, v2);
             inputPoints[i-1] = vec;
+            origins[i-1] = vec;
         }
         return true;
     }

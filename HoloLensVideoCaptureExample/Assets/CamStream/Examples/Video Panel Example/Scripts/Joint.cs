@@ -14,9 +14,7 @@ public class Joint : MonoBehaviour
     public void SetPointer(Vector3 v1)
     {
         v1.y = v1.y * -1;
-        Debug.Log("before:  " + v1);
         JointObject.transform.position = v1;
-        Debug.Log("after:  " + JointObject.transform.position);
     }
 
 }
