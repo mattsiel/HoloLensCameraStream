@@ -159,7 +159,7 @@ public class TCPClient : MonoBehaviour
         try
         {
             // Write header
-            dw.WriteString("v"); // header "f"
+            dw.WriteString("v"); // header "v"
 
             // Write Timestamp and Length
             dw.WriteInt32(LRFImage.Length);

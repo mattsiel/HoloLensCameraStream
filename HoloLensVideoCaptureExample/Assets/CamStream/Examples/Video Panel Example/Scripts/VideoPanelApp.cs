@@ -25,13 +25,14 @@ using Windows.Perception.Spatial;
 /// </summary>
 public class VideoPanelApp : MonoBehaviour
 {
+
     byte[] _latestImageBytes;
     TCPClient tcpClient;
     TCPServer tcpServer;
     HoloLensCameraStream.Resolution _resolution;
 
     //"Injected" objects.
-    VideoPanel _videoPanelUI;
+    public VideoPanel _videoPanelUI;
     VideoCapture _videoCapture;
     public TextMesh _displayText;
 
@@ -104,12 +105,21 @@ public class VideoPanelApp : MonoBehaviour
     yield return null;
     }
 
+    public void SendSingleFrameNoAsync()
+    {
+#if ENABLE_WINMD_SUPPORT
+#if WINDOWS_UWP
+        tcpClient.SendPVImageAsync(_latestImageBytes);
+#endif  
+#endif
+    }
+
 
     Queue<Action> _mainThreadActions;
     void Start()
     {
-        tcpClient = GetComponent<TCPClient>();
-        tcpServer = GetComponent<TCPServer>();
+        tcpClient = this.gameObject.GetComponent<TCPClient>();
+        tcpServer = this.gameObject.GetComponent<TCPServer>();
         _mainThreadActions = new Queue<Action>();
         
 
@@ -141,9 +151,44 @@ public class VideoPanelApp : MonoBehaviour
         CameraStreamHelper.Instance.GetVideoCaptureAsync(OnVideoCaptureCreated);
         //You could also do this "shortcut":
         //CameraStreamManager.Instance.GetVideoCaptureAsync(v => videoCapture = v);
-
-        _videoPanelUI = GameObject.FindObjectOfType<VideoPanel>();
         _videoPanelUI.meshRenderer.transform.localScale = new Vector3(1, -1, 1);
+    }
+
+    public IEnumerator reStart()
+    {
+         _mainThreadActions = new Queue<Action>();
+        
+
+        //Fetch a pointer to Unity's spatial coordinate system if you need pixel mapping
+
+#if WINDOWS_UWP
+
+#if XR_PLUGIN_WINDOWSMR
+
+        _spatialCoordinateSystemPtr = UnityEngine.XR.WindowsMR.WindowsMREnvironment.OriginSpatialCoordinateSystem;
+
+#elif XR_PLUGIN_OPENXR
+
+        _spatialCoordinateSystem = Microsoft.MixedReality.OpenXR.PerceptionInterop.GetSceneCoordinateSystem(UnityEngine.Pose.identity) as SpatialCoordinateSystem;
+
+#elif BUILTIN_XR
+
+#if UNITY_2017_2_OR_NEWER
+        _spatialCoordinateSystemPtr = UnityEngine.XR.WSA.WorldManager.GetNativeISpatialCoordinateSystemPtr();
+#else
+        _spatialCoordinateSystemPtr = UnityEngine.VR.WSA.WorldManager.GetNativeISpatialCoordinateSystemPtr();
+#endif
+
+#endif
+
+#endif
+
+        //Call this in Start() to ensure that the CameraStreamHelper is already "Awake".
+        CameraStreamHelper.Instance.GetVideoCaptureAsync(OnVideoCaptureCreated);
+        //You could also do this "shortcut":
+        //CameraStreamManager.Instance.GetVideoCaptureAsync(v => videoCapture = v);
+        _videoPanelUI.meshRenderer.transform.localScale = new Vector3(1, -1, 1);
+        yield return null;
     }
 
     private void Update()
@@ -213,7 +258,6 @@ public class VideoPanelApp : MonoBehaviour
 
         Debug.Log("Configuring camera: " + _resolution.width + "x" + _resolution.height + "x" + cameraParams.frameRate + " | " + cameraParams.pixelFormat);
         Enqueue(() => SetText("Configuring camera: " + _resolution.width + "x" + _resolution.height + "x" + cameraParams.frameRate + " | " + cameraParams.pixelFormat));
-
         Enqueue(() => _videoPanelUI.SetResolution(_resolution.width, _resolution.height));
         videoCapture.StartVideoModeAsync(cameraParams, OnVideoModeStarted);
     }

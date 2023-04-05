@@ -24,7 +24,6 @@ using Windows.Storage.Streams;
 //Able to act as a reciever 
 public class TCPServer : MonoBehaviour
 {
-    public Texture preLoadedTexture;
     public GameObject debugLogText;
     Stream streamIn;
     Renderer rend;
@@ -37,18 +36,21 @@ public class TCPServer : MonoBehaviour
     bool loadTexture = false;
     bool logSize = false;
     bool recievedData = false;
+
     bool logRealInput = false;
     string realInput;
+    public bool finishedSettingData = false;
 
     int sizeOfBuffer;
     string error;
-    
-    public string port;
+    public Vector3[] inputPointsTCP;
+    public Vector3 offset = new Vector3(-4.6f, -1.6f, 8);
     
     uint imageSize;
 #if !UNITY_EDITOR
         StreamSocket socket;
         StreamSocketListener listener;
+        String port;
         String message;
     
 #endif
@@ -56,10 +58,10 @@ public class TCPServer : MonoBehaviour
     void Start()
     {
 #if !UNITY_EDITOR
-       
+        offset = new Vector3(-4.6f, -1.6f, 8);
         rend = this.GetComponent<Renderer>();
         listener = new StreamSocketListener();
-        texture = new Texture2D(424, 240, TextureFormat.RGBA32, false);
+        port = "8080";
 
         listener.ConnectionReceived += _receiver_socket_ConnectionReceived;
 
@@ -67,13 +69,12 @@ public class TCPServer : MonoBehaviour
 
         Listener_Start();
 #endif
+    inputPointsTCP = new Vector3[30];
     }
 
 #if !UNITY_EDITOR
     private async void Listener_Start()
     {
-        
-        LOG("listninboi");
         Debug.Log("Listener started");
         try
         {
@@ -87,8 +88,6 @@ public class TCPServer : MonoBehaviour
 
        
     }
-
-
 
     private async void _receiver_socket_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
     {
@@ -112,29 +111,39 @@ public class TCPServer : MonoBehaviour
                     logInputSize = true;
                     recievedData = true;
                     var input = dr.ReadString(imageSize);
-                    
-                    //trim off the b'' part of the base64 encoding, if 4bytes remove 1 if 5 bytes remove 2
-                    if(inputSize.Length == 4)
-                    {
-                        input = input.Substring(1, input.Length - 1);
-                    }
-                    else
-                    {
-                        input = input.Substring(2, input.Length - 2);
-                    }
-                    //input = input.Substring(0, (input.Length - 1));
 
-                    realInput = input.Substring(0, 10) + "\n" + input.Substring(input.Length - 3); //display realInput start and end bytes
-                    logRealInput = true;
-                    while(input.Length % 4 != 0)
-                    {
-                        input += "=";
-                    }
+                    input = input.Substring(1);
+                    input = input.Substring(0, input.Length - 1);
+                    input = input + "==";
+
                     byte[] byteArray = Convert.FromBase64String(input);
-                    videoPanel.SetBytes(byteArray);
-                    byArray = byteArray; //set the public byArray to the bytearray texture 
-                    loadTexture = true;
-                    //writeToFile(input);
+                    string fullInput = System.Text.Encoding.UTF8.GetString(byteArray);
+                    finishedSettingData = ChangeStuff(fullInput);
+                    // bool finished = JointManager.Instance.getDataPoints(fullInput);
+                    //JointManager.Instance.UpdatePosition(fullInput);
+                    
+                    // //trim off the b'' part of the base64 encoding, if 4bytes remove 1 if 5 bytes remove 2
+                    // if(inputSize.Length == 4)
+                    // {
+                    //     input = input.Substring(1, input.Length - 1);
+                    // }
+                    // else
+                    // {
+                    //     input = input.Substring(2, input.Length - 2);
+                    // }
+                    // //input = input.Substring(0, (input.Length - 1));
+
+                    // realInput = input.Substring(0, 10) + "\n" + input.Substring(input.Length - 3); //display realInput start and end bytes
+                    // logRealInput = true;
+                    // while(input.Length % 4 != 0)
+                    // {
+                    //     input += "=";
+                    // }
+                    // byte[] byteArray = Convert.FromBase64String(input);
+                    // byArray = byteArray;
+
+                    // loadTexture = true;
+                    // //writeToFile(input);
 
 
                 }
@@ -145,6 +154,44 @@ public class TCPServer : MonoBehaviour
             error = e.Message;
             socketClosed = true;
         }
+    }
+
+    public bool ChangeStuff(string input)
+    {
+        inputPointsTCP = new Vector3[30];
+        input = input.Substring(1);
+        input = input.Substring(1); 
+        input = input.Substring(0, input.Length - 1); 
+
+        string [] x = input.Split('[').ToArray();
+        
+        for(int i = 1; i < x.Length; i++){
+            x[i] = x[i].Substring(0, (x[i]).Length - 1).Trim(); 
+            Debug.Log(x[i]);
+            x[i] = x[i].Replace(System.Environment.NewLine + "  ", "");
+
+            while (x[i].Contains("  "))
+            {
+                x[i] = x[i].Replace("  ", " ");
+            }
+
+            x[i] = x[i].Substring(0, (x[i]).Length - 1).Trim(); 
+            // realInput = x[i];
+            // logRealInput = true;
+            string [] chx = x[i].Split(' ').ToArray();
+            // realInput = chx[0] + " " + chx[1] + " " + chx[2];
+            // logRealInput = true;
+            float v0 = float.Parse(chx[0])/35;
+            float v1 = float.Parse(chx[1])/35;
+            float v2 = float.Parse(chx[2])/35;
+            v2 = 0;
+            // realInput = "floats: " + v0.ToString() + " " + v1.ToString() + " " + v2.ToString();
+            Vector3 vec = new Vector3(v0, v1, v2) + offset;
+            inputPointsTCP[i-1] = vec;
+            realInput = "vectors: " + inputPointsTCP[i-1].x + " " + inputPointsTCP[i-1].y + " " + inputPointsTCP[i-1].z;
+            logRealInput = true;
+        }
+        return true;
     }
 
     //private async Task readTCPDataAsync(DataReader reader)
@@ -202,17 +249,26 @@ public class TCPServer : MonoBehaviour
 
     //}
 #endif
+
+    public bool Offset(Vector3 offs)
+    {
+        inputPointsTCP = JointManager.Instance.inputPoints;
+        offset = JointManager.Instance.offset;
+        for(int i = 0; i < inputPointsTCP.Length; i++) {
+            Debug.Log( "joint " + inputPointsTCP[i]);
+            inputPointsTCP[i] = inputPointsTCP[i] + offs;
+        }
+
+        return true;
+    }
+    
     void writeToFile(byte[] bytes)
     {
-        
-
         string path = Path.Combine(Application.persistentDataPath, "MyFile.txt");
         using (TextWriter writer = File.CreateText(path))
         {
             writer.Write("hey there frend this is working now whoooo!");
             writer.Write(bytes);
-            
-           
         }
     }
     void writeToFile(String str)
@@ -221,12 +277,9 @@ public class TCPServer : MonoBehaviour
         using (TextWriter writer = File.CreateText(path))
         {
             writer.Write("Hey there frend");
-            
-
         }
-
     }
-    void LOG(string msg)
+    public void LOG(string msg)
     {
         debugLogText.GetComponent<TextMesh>().text += "\n " + msg;
     }
@@ -263,11 +316,6 @@ public class TCPServer : MonoBehaviour
         if(loadTexture)
         {
             LOG("LOADING IMAGE CURRENTLY");
-            texture.LoadImage(byArray);
-            this.rend.material.mainTexture = preLoadedTexture;
-            
-            
-            this.rend.material.mainTexture = texture;
             LOG("LOADED IMAGE");
             loadTexture = false;
         }
