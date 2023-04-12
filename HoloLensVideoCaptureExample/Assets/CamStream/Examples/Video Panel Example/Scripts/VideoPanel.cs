@@ -15,12 +15,12 @@ public class VideoPanel : MonoBehaviour
         transform.localScale = new Vector3(0.4f, 0.4f * height / width);
 
         var texture = new Texture2D(width, height, TextureFormat.BGRA32, false);
+
         meshRenderer.sharedMaterial.mainTexture = texture;
     }
 
     public void SetBytes(byte[] image)
     {
-        
         var texture = meshRenderer.sharedMaterial.mainTexture as Texture2D;
         texture.LoadRawTextureData(image); //TODO: Should be able to do this: texture.LoadRawTextureData(pointerToImage, 1280 * 720 * 4);
         texture.Apply();

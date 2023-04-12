@@ -2,7 +2,6 @@
 // Copyright (c) 2017 Vulcan, Inc. All rights reserved.  
 // Licensed under the Apache 2.0 license. See LICENSE file in the project root for full license information.
 //
-
 using UnityEngine;
 using System;
 using HoloLensCameraStream;
@@ -13,6 +12,10 @@ using System.Collections;
 using Windows.Perception.Spatial;
 #endif
 
+#if ENABLE_WINMD_SUPPORT
+using HL2UnityPlugin;
+using UnityEngine.Windows;
+#endif
 /// <summary>
 /// This example gets the video frames at 30 fps and displays them on a Unity texture,
 /// and displayed the debug information in front.
@@ -40,6 +43,10 @@ public class VideoPanelApp : MonoBehaviour
 
 #if WINDOWS_UWP && XR_PLUGIN_OPENXR
     SpatialCoordinateSystem _spatialCoordinateSystem;
+#endif
+
+#if ENABLE_WINMD_SUPPORT
+    HL2ResearchMode researchMode;
 #endif
 
     public void SendBytesToPythonAll()
@@ -114,10 +121,28 @@ public class VideoPanelApp : MonoBehaviour
 #endif
     }
 
+    public void SavePointCloudPLY()
+    {
+#if ENABLE_WINMD_SUPPORT
+        var longpointCloud = researchMode.GetLongThrowPointCloudBuffer();
+        var longpointMap = researchMode.GetLongDepthMapTextureBuffer();
+        DebugText.LOG(longpointMap[5040].ToString() + ", " + longpointMap[4440].ToString()+ ", " + longpointMap[4740].ToString());
+#endif
+    }
 
     Queue<Action> _mainThreadActions;
     void Start()
     {
+        DebugText.LOG("Starting program");
+#if ENABLE_WINMD_SUPPORT
+        researchMode = new HL2ResearchMode();
+        researchMode.InitializeLongDepthSensor();
+#if WINDOWS_UWP && XR_PLUGIN_OPENXR
+        researchMode.SetReferenceCoordinateSystem(_spatialCoordinateSystem);
+#endif
+        researchMode.SetPointCloudDepthOffset(0);
+        researchMode.StartLongDepthSensorLoop(true);
+#endif
         tcpClient = this.gameObject.GetComponent<TCPClient>();
         tcpServer = this.gameObject.GetComponent<TCPServer>();
         _mainThreadActions = new Queue<Action>();
@@ -142,9 +167,7 @@ public class VideoPanelApp : MonoBehaviour
 #else
         _spatialCoordinateSystemPtr = UnityEngine.VR.WSA.WorldManager.GetNativeISpatialCoordinateSystemPtr();
 #endif
-
 #endif
-
 #endif
 
         //Call this in Start() to ensure that the CameraStreamHelper is already "Awake".
@@ -178,9 +201,7 @@ public class VideoPanelApp : MonoBehaviour
 #else
         _spatialCoordinateSystemPtr = UnityEngine.VR.WSA.WorldManager.GetNativeISpatialCoordinateSystemPtr();
 #endif
-
 #endif
-
 #endif
 
         //Call this in Start() to ensure that the CameraStreamHelper is already "Awake".
@@ -200,7 +221,15 @@ public class VideoPanelApp : MonoBehaviour
                 _mainThreadActions.Dequeue().Invoke();
             }
         }
+    }
 
+    public int counter = 0;
+    private void FixedUpdate()
+    {
+        if(counter % 40 == 0){
+            SavePointCloudPLY();
+        }
+        counter++;
     }
 
     private void Enqueue(Action action)
