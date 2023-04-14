@@ -9,9 +9,11 @@ public class JointManager : MonoBehaviour
 {
     // List<Vector3> inputPoints = new List<Vector3>();
     public Vector3[] inputPoints = new Vector3[30];
+    public Vector3[] dataPoints = new Vector3[30];
     public Vector3[] origins = new Vector3[30];
     public static JointManager Instance;
     public TCPServer TCPServerInst;
+    public VideoPanelApp VidPan;
     public Appendage leftShoulder, rightShoulder;
     public Appendage neck;
     public Appendage upLeftArm, upRightArm;
@@ -38,7 +40,12 @@ public class JointManager : MonoBehaviour
     void Start()
     {
         Instance = this;
-        getDataPoints(dataStr4);
+        string input = dataStr4;
+        input = input.Substring(1);
+        input = input.Substring(1); 
+        input = input.Substring(0, input.Length - 1); 
+        input = input.Substring(0, input.Length - 1); 
+        getDataPoints(input);
         UpdatePosition();
 
     }
@@ -47,7 +54,6 @@ public class JointManager : MonoBehaviour
     {
         if(TCPServerInst.finishedSettingData)
         {
-            inputPoints = TCPServerInst.inputPointsTCP;
             origins = inputPoints;
             UpdatePosition();
             TCPServerInst.finishedSettingData = false;
@@ -178,11 +184,6 @@ public class JointManager : MonoBehaviour
     }
     public bool getDataPoints(string input)
     {
-        input = input.Substring(1);
-        input = input.Substring(1); 
-        input = input.Substring(0, input.Length - 1); 
-        input = input.Substring(0, input.Length - 1); 
-
         string [] x = input.Split('[').ToArray();
         
         for(int i = 1; i < x.Length; i++){
@@ -195,9 +196,17 @@ public class JointManager : MonoBehaviour
             }
             x[i] = x[i].Substring(0, (x[i]).Length - 1).Trim(); 
             string [] chx = x[i].Split(' ').ToArray();
-            float v0 = float.Parse(chx[0])/50;
-            float v1 = float.Parse(chx[1])/50;
-            float v2 = float.Parse(chx[2])/50;
+
+            // for depth
+            float v0 = float.Parse(chx[0]);
+            float v1 = float.Parse(chx[1]);
+            float v2 = float.Parse(chx[0])/50;
+#if ENABLE_WINMD_SUPPORT
+            v2 = int.Parse(VidPan.AlignTextures(v0, v1));
+#endif
+            v0 = float.Parse(chx[0])/50;
+            v1 = float.Parse(chx[1])/50;
+
             Vector3 vec = new Vector3(v0, v1, v2);
             inputPoints[i-1] = vec;
             origins[i-1] = vec;

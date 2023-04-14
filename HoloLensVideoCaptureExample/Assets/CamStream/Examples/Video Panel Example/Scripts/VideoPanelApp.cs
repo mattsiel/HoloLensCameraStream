@@ -49,6 +49,9 @@ public class VideoPanelApp : MonoBehaviour
     HL2ResearchMode researchMode;
 #endif
 
+    private Texture2D depthTexture;
+    private byte [] depthData;
+
     public void SendBytesToPythonAll()
     {
         StartCoroutine(SendAllFrames());
@@ -121,18 +124,31 @@ public class VideoPanelApp : MonoBehaviour
 #endif
     }
 
-    public void SavePointCloudPLY()
+#if ENABLE_WINMD_SUPPORT
+    public string AlignTextures(float x, float y)
+    {
+        x = x + 30f;
+        y = y + 10f;
+        byte[] frameTexture = researchMode.GetLongDepthMapTextureBuffer();
+        // Calculation to get 1D from 2D y * width + x
+        string point = frameTexture[(int)(y * 320 + x)].ToString();
+        DebugText.LOG(point);
+        return point;
+    }
+#endif
+
+    public void LogPoints(int point)
     {
 #if ENABLE_WINMD_SUPPORT
-        var longpointCloud = researchMode.GetLongThrowPointCloudBuffer();
         var longpointMap = researchMode.GetLongDepthMapTextureBuffer();
-        DebugText.LOG(longpointMap[5040].ToString() + ", " + longpointMap[4440].ToString()+ ", " + longpointMap[4740].ToString());
+        DebugText.LOG(longpointMap[point].ToString());
 #endif
     }
 
     Queue<Action> _mainThreadActions;
     void Start()
     {
+        depthTexture = new Texture2D(320, 288, TextureFormat.Alpha8, false);
         DebugText.LOG("Starting program");
 #if ENABLE_WINMD_SUPPORT
         researchMode = new HL2ResearchMode();
@@ -226,10 +242,10 @@ public class VideoPanelApp : MonoBehaviour
     public int counter = 0;
     private void FixedUpdate()
     {
-        if(counter % 40 == 0){
-            SavePointCloudPLY();
-        }
-        counter++;
+        // if(counter % 40 == 0){
+        //     LogPoints(1);
+        // }
+        // counter++;
     }
 
     private void Enqueue(Action action)

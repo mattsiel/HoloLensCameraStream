@@ -119,7 +119,11 @@ public class TCPServer : MonoBehaviour
 
                     byte[] byteArray = Convert.FromBase64String(input);
                     string fullInput = System.Text.Encoding.UTF8.GetString(byteArray);
-                    finishedSettingData = ChangeStuff(fullInput);
+
+                    fullInput = fullInput.Substring(1);
+                    fullInput = fullInput.Substring(1); 
+                    fullInput = fullInput.Substring(0, input.Length - 1); 
+                    finishedSettingData = JointManager.Instance.getDataPoints(fullInput);
                     // bool finished = JointManager.Instance.getDataPoints(fullInput);
                     //JointManager.Instance.UpdatePosition(fullInput);
                     
@@ -160,9 +164,6 @@ public class TCPServer : MonoBehaviour
     public bool ChangeStuff(string input)
     {
         inputPointsTCP = new Vector3[30];
-        input = input.Substring(1);
-        input = input.Substring(1); 
-        input = input.Substring(0, input.Length - 1); 
 
         string [] x = input.Split('[').ToArray();
         
@@ -250,18 +251,6 @@ public class TCPServer : MonoBehaviour
 
     //}
 #endif
-
-    public bool Offset()
-    {
-        offset = inputPointsTCP[0] - Alignment.position;
-        inputPointsTCP[0] = Alignment.position;
-
-        for(int i = 1; i < inputPointsTCP.Length; i++)
-        {
-            inputPointsTCP[i] = inputPointsTCP[i] + offset;
-        } 
-        return true;
-    }
     
     void writeToFile(byte[] bytes)
     {
